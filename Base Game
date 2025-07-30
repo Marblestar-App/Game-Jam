@@ -1,0 +1,83 @@
+import pygame
+import random
+
+# --- Setup ---
+pygame.init()
+WIDTH, HEIGHT = 480, 640
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+clock = pygame.time.Clock()
+
+# --- Game Variables ---
+FPS = 60
+SHIP_SPEED = 5
+OBSTACLE_SPEED = 3
+LOOP_TIME = 15  # seconds per loop
+loop_timer = LOOP_TIME * FPS
+loop_count = 1
+
+# --- Colors ---
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+BLUE = (50, 50, 200)
+
+# --- Player ---
+ship = pygame.Rect(WIDTH // 2 - 20, HEIGHT - 80, 40, 40)
+
+# --- Obstacles ---
+obstacles = []
+OBSTACLE_WIDTH = 40
+OBSTACLE_HEIGHT = 20
+def spawn_obstacle():
+    x = random.randint(0, WIDTH - OBSTACLE_WIDTH)
+    rect = pygame.Rect(x, -OBSTACLE_HEIGHT, OBSTACLE_WIDTH, OBSTACLE_HEIGHT)
+    obstacles.append(rect)
+
+# --- Game Loop ---
+running = True
+spawn_cooldown = 0
+font = pygame.font.SysFont("consolas", 20)
+while running:
+    screen.fill(BLACK)
+    loop_timer -= 1
+    if loop_timer <= 0:
+        loop_count += 1
+        loop_timer = LOOP_TIME * FPS
+        OBSTACLE_SPEED += 1  # increase difficulty
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_LEFT] and ship.left > 0:
+        ship.x -= SHIP_SPEED
+    if keys[pygame.K_RIGHT] and ship.right < WIDTH:
+        ship.x += SHIP_SPEED
+
+    # Spawn obstacles
+    spawn_cooldown -= 1
+    if spawn_cooldown <= 0:
+        spawn_obstacle()
+        spawn_cooldown = max(15, 60 - loop_count * 2)  # Faster spawns as loop increases
+
+    # Update obstacles
+    for ob in obstacles[:]:
+        ob.y += OBSTACLE_SPEED
+        if ob.y > HEIGHT:
+            obstacles.remove(ob)
+        elif ob.colliderect(ship):
+            running = False  # Game over
+
+    # Draw
+    pygame.draw.rect(screen, BLUE, ship)
+    for ob in obstacles:
+        pygame.draw.rect(screen, WHITE, ob)
+
+    # HUD
+    text = font.render(f"Loop: {loop_count}", True, WHITE)
+    screen.blit(text, (10, 10))
+
+    pygame.display.flip()
+    clock.tick(FPS)
+
+pygame.quit()
