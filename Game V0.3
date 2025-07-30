@@ -1,0 +1,103 @@
+import pygame
+import random
+import os
+# --- Setup ---
+pygame.init()
+WIDTH, HEIGHT = 480, 640
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+clock = pygame.time.Clock()
+
+ASTEROID = pygame.image.load(os.path.join("GMTK Game Jam 2025","Assets","Asteroid_Brown.png")).convert_alpha()
+ASTEROID = pygame.transform.scale(ASTEROID,(64,64))
+# --- Game Variables ---
+FPS = 60
+SHIP_SPEED = 5
+OBSTACLE_SPEED = 3
+LOOP_TIME = 7  # seconds per loop
+loop_timer = LOOP_TIME * FPS
+loop_count = 1
+score = 0
+# --- Colors ---
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+BLUE = (50, 50, 200)
+
+# --- Player ---
+ship = pygame.Rect(WIDTH // 2 - 20, HEIGHT - 80, 60, 40)
+
+# --- Obstacles ---
+obstacles = []
+OBSTACLE_WIDTH = 40
+OBSTACLE_HEIGHT = 20
+def spawn_obstacle():
+    x = random.randint(0, WIDTH - OBSTACLE_WIDTH)
+    obstacle = {
+    "rect": pygame.Rect(x, -OBSTACLE_HEIGHT, OBSTACLE_WIDTH, OBSTACLE_HEIGHT),
+    "img": ASTEROID,
+    "angle": random.randint(0, 360)  # optional: for rotation
+}
+    obstacles.append(obstacle)
+    
+
+# --- Game Loop ---
+running = True
+spawn_cooldown = 0
+font = pygame.font.SysFont("comicsans", 20)
+while running:
+    screen.fill(BLACK)
+    loop_timer -= 1
+    if loop_timer <= 0:
+        loop_count += 1
+        loop_timer = LOOP_TIME * FPS
+        OBSTACLE_SPEED += 1  # increase difficulty
+    
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_LEFT] and ship.left > 0:
+        ship.x -= SHIP_SPEED
+    if keys[pygame.K_RIGHT] and ship.right < WIDTH:
+        ship.x += SHIP_SPEED
+
+    # Spawn obstacles
+    spawn_cooldown -= 1
+    if spawn_cooldown <= 0:
+        spawn_obstacle()
+        
+        
+        spawn_cooldown = max(15, 60 - loop_count * 2)  # Faster spawns as loop increases
+
+    for ob in obstacles[:]:
+        ob["rect"].y += OBSTACLE_SPEED
+
+        # Remove if offscreen
+        if ob["rect"].y > HEIGHT:
+            obstacles.remove(ob)
+            score+=1
+
+        # Collision detection with player ship
+        elif ob["rect"].colliderect(ship):
+            running = False
+
+        # Draw rotated asteroid image
+        rotated_img = pygame.transform.rotate(ob["img"], ob["angle"])
+        rotated_rect = rotated_img.get_rect(center=ob["rect"].center)
+        screen.blit(rotated_img, rotated_rect.topleft)
+
+        # Increment rotation angle (loop rotation)
+        ob["angle"] += 2
+
+    # Draw
+    pygame.draw.rect(screen, BLUE, ship)
+
+    # HUD
+    text = font.render(f"Loop: {loop_count}", True, WHITE)
+    text1 = font.render(f"Score: {score}",True,WHITE) 
+    screen.blit(text, (10, 10))
+    screen.blit(text1, (10, 40))
+    pygame.display.flip()
+    clock.tick(FPS)
+
+pygame.quit()
